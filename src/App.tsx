@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TakeoutConversation, TakeoutAttachment, ParseProgress } from './types';
 import { SAMPLE_CONVERSATIONS } from './data/sampleData';
 import { parseTakeoutArchive } from './utils/parser';
+import { getFilesFromDataTransfer } from './utils/fileDrop';
 import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ChatArea } from './components/ChatArea';
@@ -13,12 +14,15 @@ import { ExportModal } from './components/ExportModal';
 import { MembersModal } from './components/MembersModal';
 import { MediaLightbox } from './components/MediaLightbox';
 import { RawJsonModal } from './components/RawJsonModal';
+import { UploadCloud } from 'lucide-react';
 
 export default function App() {
   const [conversations, setConversations] = useState<TakeoutConversation[]>(SAMPLE_CONVERSATIONS);
   const [activeConversationId, setActiveConversationId] = useState<string>(SAMPLE_CONVERSATIONS[0]?.id || '');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
+  const [isWindowDragging, setIsWindowDragging] = useState(false);
+  const dragCounterRef = useRef(0);
 
   // Modals & Overlays
   const [uploadViewOpen, setUploadViewOpen] = useState(false);
@@ -53,7 +57,7 @@ export default function App() {
     }
   }, [darkMode]);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts & Window-level Drag-and-Drop
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -64,8 +68,57 @@ export default function App() {
         setSearchModalOpen(true);
       }
     };
+
+    const handleWindowDragEnter = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current += 1;
+      if (e.dataTransfer?.types?.includes('Files')) {
+        setIsWindowDragging(true);
+      }
+    };
+
+    const handleWindowDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    };
+
+    const handleWindowDragLeave = (e: DragEvent) => {
+      e.preventDefault();
+      dragCounterRef.current -= 1;
+      if (dragCounterRef.current <= 0) {
+        setIsWindowDragging(false);
+        dragCounterRef.current = 0;
+      }
+    };
+
+    const handleWindowDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      setIsWindowDragging(false);
+      dragCounterRef.current = 0;
+
+      if (e.dataTransfer) {
+        const files = await getFilesFromDataTransfer(e.dataTransfer);
+        if (files && files.length > 0) {
+          handleFilesSelected(files);
+        }
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('dragenter', handleWindowDragEnter);
+    window.addEventListener('dragover', handleWindowDragOver);
+    window.addEventListener('dragleave', handleWindowDragLeave);
+    window.addEventListener('drop', handleWindowDrop);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('dragenter', handleWindowDragEnter);
+      window.removeEventListener('dragover', handleWindowDragOver);
+      window.removeEventListener('dragleave', handleWindowDragLeave);
+      window.removeEventListener('drop', handleWindowDrop);
+    };
   }, []);
 
   const handleFilesSelected = async (files: File[]) => {
@@ -300,6 +353,28 @@ export default function App() {
           data={rawJsonData}
           onClose={() => setRawJsonData(null)}
         />
+      )}
+
+      {/* Global Window Drag-and-Drop Overlay */}
+      {isWindowDragging && (
+        <div
+          id="window-drag-overlay"
+          className="fixed inset-0 z-50 bg-[#1a73e8]/20 backdrop-blur-xs border-4 border-dashed border-[#1a73e8] flex flex-col items-center justify-center pointer-events-none p-6 animate-pulse"
+        >
+          <div className="bg-white dark:bg-neutral-900 border border-[#1a73e8] rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-md text-center">
+            <div className="w-16 h-16 rounded-full bg-[#1a73e8] text-white flex items-center justify-center shadow-lg">
+              <UploadCloud className="w-9 h-9" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-[#202124] dark:text-neutral-100">
+                Drop Google Takeout Archive Here
+              </h2>
+              <p className="text-xs text-[#5f6368] dark:text-neutral-400 mt-1">
+                Release your Takeout .zip archive, folder, or JSON export anywhere to parse locally.
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

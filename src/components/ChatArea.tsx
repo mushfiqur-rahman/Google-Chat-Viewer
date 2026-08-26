@@ -44,6 +44,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   const [showStarredOnly, setShowStarredOnly] = useState(false);
   const [bookmarkedIds, setBookmarkedIds] = useState<Set<string>>(new Set());
   const [highlightedId, setHighlightedId] = useState<string | undefined>(highlightMessageId);
+  const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
@@ -52,10 +53,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   useEffect(() => {
     if (highlightMessageId) {
       setHighlightedId(highlightMessageId);
+      setFocusedMessageId(highlightMessageId);
       setTimeout(() => {
         const el = document.getElementById(`msg-${highlightMessageId}`);
         if (el) {
           el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.focus();
         }
       }, 100);
     }
@@ -115,6 +118,45 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   const scrollToTop = () => {
     chatContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleMessageKeyDown = (e: React.KeyboardEvent, messageId: string) => {
+    const currentIndex = filteredMessages.findIndex((m) => m.id === messageId);
+    if (currentIndex === -1) return;
+
+    let targetIndex = currentIndex;
+
+    if (e.key === 'ArrowUp' || e.key === 'k') {
+      e.preventDefault();
+      targetIndex = Math.max(0, currentIndex - 1);
+    } else if (e.key === 'ArrowDown' || e.key === 'j') {
+      e.preventDefault();
+      targetIndex = Math.min(filteredMessages.length - 1, currentIndex + 1);
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      targetIndex = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      targetIndex = filteredMessages.length - 1;
+    } else if (e.key === 'PageUp') {
+      e.preventDefault();
+      targetIndex = Math.max(0, currentIndex - 10);
+    } else if (e.key === 'PageDown') {
+      e.preventDefault();
+      targetIndex = Math.min(filteredMessages.length - 1, currentIndex + 10);
+    } else {
+      return;
+    }
+
+    const targetMsg = filteredMessages[targetIndex];
+    if (targetMsg) {
+      setFocusedMessageId(targetMsg.id);
+      const el = document.getElementById(`msg-${targetMsg.id}`);
+      if (el) {
+        el.focus();
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
   };
 
   // Format first and last message dates for conversation range badge
@@ -317,10 +359,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                   isFirstInGroup={isFirstInGroup}
                   searchQuery={localSearch}
                   isHighlighted={highlightedId === msg.id}
+                  isFocused={focusedMessageId === msg.id}
                   onSelectMedia={onSelectMedia}
                   onViewRawJson={onViewRawJson}
                   onToggleBookmark={toggleBookmark}
                   onJumpToThread={(tId) => setSelectedTopic(tId)}
+                  onMessageFocus={(id) => setFocusedMessageId(id)}
+                  onKeyDown={handleMessageKeyDown}
                 />
               </React.Fragment>
             );
@@ -348,12 +393,36 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </button>
       </div>
 
-      {/* Offline Archive Mode Bottom Banner */}
-      <div className="p-3 bg-white dark:bg-neutral-900 border-t border-[#dadce0] dark:border-neutral-800 shrink-0 select-none">
-        <div className="flex items-center gap-3 px-4 py-2 bg-[#f1f3f4] dark:bg-neutral-800/80 rounded-full text-[#5f6368] dark:text-neutral-400 text-xs border border-[#dadce0] dark:border-neutral-700">
+      {/* Bottom Status & Keyboard Navigation Hints */}
+      <div className="p-2.5 sm:p-3 bg-white dark:bg-neutral-900 border-t border-[#dadce0] dark:border-neutral-800 shrink-0 select-none flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-[#f1f3f4] dark:bg-neutral-800/80 rounded-full text-[#5f6368] dark:text-neutral-400 text-xs border border-[#dadce0] dark:border-neutral-700 w-full sm:w-auto truncate">
           <Lock className="w-3.5 h-3.5 text-[#5f6368] dark:text-neutral-400 shrink-0" />
-          <span className="truncate">
-            Offline Archive Mode: Messaging is disabled. Viewing Google Chat Takeout local history.
+          <span className="truncate text-[11px]">
+            Offline Archive Mode: Viewing Google Chat Takeout local history.
+          </span>
+        </div>
+
+        {/* Keyboard navigation quick tips */}
+        <div className="hidden lg:flex items-center gap-2 text-[11px] text-[#5f6368] dark:text-neutral-400 font-mono">
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#f1f3f4] dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded text-[10px] font-sans font-bold">↑</kbd>
+            <kbd className="px-1.5 py-0.5 bg-[#f1f3f4] dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded text-[10px] font-sans font-bold">↓</kbd>
+            <span>Jump msg</span>
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#f1f3f4] dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded text-[10px] font-sans font-bold">S</kbd>
+            <span>Star</span>
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#f1f3f4] dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded text-[10px] font-sans font-bold">C</kbd>
+            <span>Copy</span>
+          </span>
+          <span>•</span>
+          <span className="flex items-center gap-1">
+            <kbd className="px-1.5 py-0.5 bg-[#f1f3f4] dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded text-[10px] font-sans font-bold">↵</kbd>
+            <span>Inspect</span>
           </span>
         </div>
       </div>

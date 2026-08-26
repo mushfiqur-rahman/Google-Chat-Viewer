@@ -1,6 +1,19 @@
-import React, { useState, useRef } from 'react';
-import { UploadCloud, FolderOpen, FileCode, ShieldCheck, Sparkles, AlertCircle, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import {
+  UploadCloud,
+  FolderOpen,
+  FileCode,
+  ShieldCheck,
+  Sparkles,
+  AlertCircle,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  FileArchive,
+  CheckCircle2,
+} from 'lucide-react';
 import { ParseProgress } from '../types';
+import { getFilesFromDataTransfer } from '../utils/fileDrop';
 
 interface FileUploadZoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -14,44 +27,58 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   progress,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [dragCounter, setDragCounter] = useState(0);
   const [showHowTo, setShowHowTo] = useState(false);
+  const [dropStatus, setDropStatus] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragCounter((prev) => prev + 1);
+    setIsDragging(true);
+  };
+
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    e.stopPropagation();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy';
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(false);
+    e.stopPropagation();
+    setDragCounter((prev) => {
+      const next = prev - 1;
+      if (next <= 0) {
+        setIsDragging(false);
+        return 0;
+      }
+      return next;
+    });
   };
 
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDragging(false);
+    setDragCounter(0);
 
-    const items = e.dataTransfer.items;
-    const files: File[] = [];
-
-    if (items) {
-      // Traverse dropped items (handles directories and files)
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (item.kind === 'file') {
-          const file = item.getAsFile();
-          if (file) files.push(file);
-        }
+    setDropStatus('Extracting dropped files & folders...');
+    try {
+      const files = await getFilesFromDataTransfer(e.dataTransfer);
+      if (files && files.length > 0) {
+        setDropStatus(`Loaded ${files.length} file(s) from drop.`);
+        onFilesSelected(files);
+      } else {
+        setDropStatus(null);
       }
-    } else {
-      for (let i = 0; i < e.dataTransfer.files.length; i++) {
-        files.push(e.dataTransfer.files[i]);
-      }
-    }
-
-    if (files.length > 0) {
-      onFilesSelected(files);
+    } catch (err) {
+      console.error('Error reading dropped files:', err);
+      setDropStatus(null);
     }
   };
 
@@ -61,7 +88,11 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
     }
   };
 
-  const isLoading = progress && progress.status !== 'completed' && progress.status !== 'error' && progress.status !== 'idle';
+  const isLoading =
+    progress &&
+    progress.status !== 'completed' &&
+    progress.status !== 'error' &&
+    progress.status !== 'idle';
 
   return (
     <div className="w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-5">
@@ -83,14 +114,21 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
       {/* Main Drag & Drop Zone */}
       <div
         id="dropzone-archive-upload"
+        onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-lg p-8 sm:p-10 text-center transition-all duration-200 ${
+        className={`relative border-2 border-dashed rounded-lg p-8 sm:p-10 text-center transition-all duration-200 cursor-pointer ${
           isDragging
-            ? 'border-[#1a73e8] bg-[#e8f0fe] dark:bg-[#1a73e8]/10 scale-[1.01]'
-            : 'border-[#dadce0] dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-[#1a73e8] shadow-2xs'
+            ? 'border-[#1a73e8] bg-[#e8f0fe] dark:bg-[#1a73e8]/20 ring-4 ring-[#1a73e8]/20 scale-[1.01]'
+            : 'border-[#dadce0] dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:border-[#1a73e8] dark:hover:border-[#8ab4f8] shadow-2xs'
         }`}
+        onClick={(e) => {
+          // If not clicking buttons directly, open zip picker
+          if ((e.target as HTMLElement).tagName !== 'BUTTON') {
+            fileInputRef.current?.click();
+          }
+        }}
       >
         {/* Hidden inputs */}
         <input
@@ -113,7 +151,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
         />
 
         {isLoading ? (
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 pointer-events-none">
             <div className="w-10 h-10 border-3 border-[#1a73e8] border-t-transparent rounded-full animate-spin mx-auto" />
             <div className="space-y-1">
               <h3 className="font-bold text-sm text-[#202124] dark:text-neutral-100">
@@ -140,6 +178,20 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               <span>{progress.mediaCount} media files</span>
             </div>
           </div>
+        ) : isDragging ? (
+          <div className="space-y-3 py-6 pointer-events-none animate-pulse">
+            <div className="w-16 h-16 rounded-full bg-[#1a73e8] text-white flex items-center justify-center mx-auto shadow-md">
+              <FileArchive className="w-8 h-8" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[#1a73e8] dark:text-[#8ab4f8]">
+                Release to ingest Google Takeout data
+              </h3>
+              <p className="text-xs text-[#5f6368] dark:text-neutral-300 mt-1">
+                Supports Takeout .zip files, folders, or messages.json
+              </p>
+            </div>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="w-14 h-14 rounded-full bg-[#e8f0fe] text-[#1a73e8] dark:bg-[#1a73e8]/20 dark:text-[#8ab4f8] flex items-center justify-center mx-auto shadow-2xs">
@@ -148,17 +200,18 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
             <div>
               <h3 className="text-base font-bold text-[#202124] dark:text-neutral-100">
-                Drop your Google Takeout export here
+                Drag & drop your Google Takeout archive here
               </h3>
               <p className="text-xs text-[#5f6368] dark:text-neutral-400 mt-1 max-w-md mx-auto">
-                Supports Takeout <strong>.ZIP</strong> archives, unzipped Takeout <strong>folders</strong>, or direct <strong>messages.json</strong> / <strong>Hangouts.json</strong> files.
+                Drop your <strong>.ZIP</strong> export file, an unzipped Takeout <strong>folder</strong>, or standalone <strong>messages.json</strong> / <strong>Hangouts.json</strong>.
               </p>
             </div>
 
             {/* Upload Buttons */}
-            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2" onClick={(e) => e.stopPropagation()}>
               <button
                 id="btn-select-zip-file"
+                type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-[#1a73e8] hover:bg-[#1557b0] text-white rounded font-medium text-xs shadow-2xs transition-colors"
               >
@@ -167,6 +220,7 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
 
               <button
                 id="btn-select-folder"
+                type="button"
                 onClick={() => folderInputRef.current?.click()}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-neutral-800 hover:bg-[#f1f3f4] dark:hover:bg-neutral-700 text-[#3c4043] dark:text-neutral-200 rounded font-medium text-xs border border-[#dadce0] dark:border-neutral-700 transition-colors shadow-2xs"
               >
@@ -175,10 +229,11 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
             </div>
 
             {/* Or Sample Data */}
-            <div className="pt-3 border-t border-[#dadce0] dark:border-neutral-800">
+            <div className="pt-3 border-t border-[#dadce0] dark:border-neutral-800" onClick={(e) => e.stopPropagation()}>
               <p className="text-xs text-[#5f6368] mb-2">Want to try it without an export first?</p>
               <button
                 id="btn-load-sample-takeout"
+                type="button"
                 onClick={onLoadSampleData}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1a73e8] dark:text-[#8ab4f8] hover:bg-[#e8f0fe] dark:hover:bg-[#1a73e8]/20 rounded transition-colors border border-[#d2e3fc] dark:border-neutral-700"
               >

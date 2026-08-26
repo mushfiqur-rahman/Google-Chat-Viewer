@@ -10,10 +10,13 @@ interface MessageItemProps {
   isFirstInGroup: boolean;
   searchQuery?: string;
   isHighlighted?: boolean;
+  isFocused?: boolean;
   onSelectMedia: (att: TakeoutAttachment) => void;
   onViewRawJson: (data: any) => void;
   onToggleBookmark?: (messageId: string) => void;
   onJumpToThread?: (topicId: string) => void;
+  onMessageFocus?: (messageId: string) => void;
+  onKeyDown?: (e: React.KeyboardEvent, messageId: string) => void;
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
@@ -21,10 +24,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   isFirstInGroup,
   searchQuery,
   isHighlighted,
+  isFocused,
   onSelectMedia,
   onViewRawJson,
   onToggleBookmark,
   onJumpToThread,
+  onMessageFocus,
+  onKeyDown,
 }) => {
   const [copied, setCopied] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
@@ -34,8 +40,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const initials = getInitials(creator.name);
   const isBot = creator.user_type === 'Bot_System' || creator.user_type === 'System' || creator.name.toLowerCase().includes('bot');
 
-  const handleCopyText = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleCopyText = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -45,13 +51,57 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     }
   };
 
+  const handleLocalKeyDown = (e: React.KeyboardEvent) => {
+    // Notify parent for arrow key navigation
+    if (['ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown', 'j', 'k'].includes(e.key)) {
+      onKeyDown?.(e, message.id);
+      return;
+    }
+
+    // Toggle star with 's' or 'S'
+    if ((e.key === 's' || e.key === 'S') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      onToggleBookmark?.(message.id);
+      return;
+    }
+
+    // Copy text with 'c' or 'C' if not combined with meta/ctrl
+    if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      handleCopyText();
+      return;
+    }
+
+    // Enter or Space opens first attachment or raw json
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (attached_files && attached_files.length > 0) {
+        onSelectMedia(attached_files[0]);
+      } else {
+        onViewRawJson(message.raw || message);
+      }
+      return;
+    }
+
+    onKeyDown?.(e, message.id);
+  };
+
   // System notification styling
   if (is_system_message) {
     return (
       <div
         id={`msg-${message.id}`}
-        className={`group relative flex items-start gap-3 py-2 px-3 sm:px-4 my-1 rounded-lg transition-all duration-200 ${
-          isHighlighted ? 'bg-amber-100/80 dark:bg-amber-950/40 ring-1 ring-amber-400' : 'hover:bg-[#f8f9fa] dark:hover:bg-neutral-800/40'
+        tabIndex={0}
+        role="article"
+        aria-label={`System message from ${creator.name}: ${text}`}
+        onFocus={() => onMessageFocus?.(message.id)}
+        onKeyDown={handleLocalKeyDown}
+        className={`group relative flex items-start gap-3 py-2 px-3 sm:px-4 my-1 rounded-lg transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-[#1a73e8] dark:focus:ring-[#8ab4f8] focus:bg-[#f1f3f4] dark:focus:bg-neutral-800 ${
+          isHighlighted
+            ? 'bg-amber-100/80 dark:bg-amber-950/40 ring-1 ring-amber-400'
+            : isFocused
+            ? 'bg-[#f1f3f4] dark:bg-neutral-800/80 ring-1 ring-[#1a73e8]'
+            : 'hover:bg-[#f8f9fa] dark:hover:bg-neutral-800/40'
         }`}
       >
         <div className="w-8 h-8 rounded-full bg-[#f1f3f4] dark:bg-neutral-700 flex items-center justify-center text-[#5f6368] dark:text-neutral-300 shrink-0 text-xs mt-0.5">
@@ -69,7 +119,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         </div>
 
         {/* Hover actions */}
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-4 top-2 flex items-center gap-1 bg-white dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded-md p-1 shadow-sm z-10">
+        <div className="opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity absolute right-4 top-2 flex items-center gap-1 bg-white dark:bg-neutral-800 border border-[#dadce0] dark:border-neutral-700 rounded-md p-1 shadow-sm z-10">
           <button
             onClick={() => onViewRawJson(message.raw || message)}
             title="Inspect raw Takeout JSON"
@@ -85,11 +135,18 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   return (
     <div
       id={`msg-${message.id}`}
-      className={`group relative flex gap-3.5 px-3 sm:px-6 py-1 rounded-md transition-all duration-200 ${
+      tabIndex={0}
+      role="article"
+      aria-label={`Message from ${creator.name}: ${text}`}
+      onFocus={() => onMessageFocus?.(message.id)}
+      onKeyDown={handleLocalKeyDown}
+      className={`group relative flex gap-3.5 px-3 sm:px-6 py-1 rounded-md transition-all duration-150 focus:outline-hidden focus:ring-2 focus:ring-[#1a73e8] dark:focus:ring-[#8ab4f8] focus:bg-[#e8f0fe]/30 dark:focus:bg-[#1a73e8]/10 ${
         isFirstInGroup ? 'mt-3 pt-2' : 'mt-0.5'
       } ${
         isHighlighted
           ? 'bg-amber-50 dark:bg-amber-950/40 ring-1 ring-amber-400 shadow-2xs'
+          : isFocused
+          ? 'bg-[#e8f0fe]/20 dark:bg-[#1a73e8]/10'
           : 'hover:bg-[#f8f9fa] dark:hover:bg-neutral-800/40'
       }`}
     >
