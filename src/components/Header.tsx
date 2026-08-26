@@ -8,7 +8,6 @@ import {
   Sun,
   Menu,
   ShieldCheck,
-  Sparkles,
   SlidersHorizontal,
 } from 'lucide-react';
 import { TakeoutConversation } from '../types';
@@ -19,7 +18,7 @@ interface HeaderProps {
   onOpenUpload: () => void;
   onOpenSearch: () => void;
   onOpenStats: () => void;
-  onLoadSampleData: () => void;
+  onOpenPrivacy: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onToggleSidebar: () => void;
@@ -32,7 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenUpload,
   onOpenSearch,
   onOpenStats,
-  onLoadSampleData,
+  onOpenPrivacy,
   darkMode,
   onToggleDarkMode,
   onToggleSidebar,
@@ -64,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
               Archive<span className="text-[#1a73e8] font-bold">Chat</span>
             </h1>
             <span className="hidden xs:inline-block px-1.5 py-0.5 bg-[#e8f0fe] dark:bg-[#1a73e8]/20 text-[#1967d2] dark:text-[#8ab4f8] text-[10px] font-bold rounded uppercase tracking-wider border border-[#d2e3fc] dark:border-[#1a73e8]/30">
-              Local Only
+              v0.0.1
             </span>
           </div>
         </div>
@@ -91,15 +90,15 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2">
-        {/* Sample data button */}
+        {/* Privacy Policy button */}
         <button
-          id="btn-header-sample-data"
-          onClick={onLoadSampleData}
-          className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-neutral-800 hover:bg-[#f1f3f4] dark:hover:bg-neutral-700 text-[#3c4043] dark:text-neutral-200 rounded-md text-xs font-medium transition-colors border border-[#dadce0] dark:border-neutral-700"
-          title="Reload Demo Archive"
+          id="btn-header-privacy"
+          onClick={onOpenPrivacy}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-[#f8f9fa] dark:bg-neutral-800 hover:bg-[#f1f3f4] dark:hover:bg-neutral-700 text-[#3c4043] dark:text-neutral-200 rounded-md text-xs font-medium transition-colors border border-[#dadce0] dark:border-neutral-700"
+          title="Privacy Policy & Security"
         >
-          <Sparkles className="w-3.5 h-3.5 text-[#1a73e8] dark:text-[#8ab4f8]" />
-          <span>Demo Data</span>
+          <ShieldCheck className="w-3.5 h-3.5 text-[#34a853] dark:text-[#81c995]" />
+          <span className="hidden sm:inline">Privacy Policy</span>
         </button>
 
         {/* Global Search mobile button */}
@@ -136,7 +135,7 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         {/* Toggle Right Info Panel */}
-        {onToggleInfoPanel && (
+        {onToggleInfoPanel && conversations.length > 0 && (
           <button
             onClick={onToggleInfoPanel}
             className={`hidden xl:inline-flex p-2 rounded-md transition-colors ${

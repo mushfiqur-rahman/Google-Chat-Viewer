@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TakeoutConversation, TakeoutAttachment, ParseProgress } from './types';
-import { SAMPLE_CONVERSATIONS } from './data/sampleData';
 import { parseTakeoutArchive } from './utils/parser';
 import { getFilesFromDataTransfer } from './utils/fileDrop';
 import { Header } from './components/Header';
@@ -14,11 +13,12 @@ import { ExportModal } from './components/ExportModal';
 import { MembersModal } from './components/MembersModal';
 import { MediaLightbox } from './components/MediaLightbox';
 import { RawJsonModal } from './components/RawJsonModal';
-import { UploadCloud } from 'lucide-react';
+import { PrivacyPolicyModal } from './components/PrivacyPolicyModal';
+import { UploadCloud, ShieldCheck } from 'lucide-react';
 
 export default function App() {
-  const [conversations, setConversations] = useState<TakeoutConversation[]>(SAMPLE_CONVERSATIONS);
-  const [activeConversationId, setActiveConversationId] = useState<string>(SAMPLE_CONVERSATIONS[0]?.id || '');
+  const [conversations, setConversations] = useState<TakeoutConversation[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState<string>('');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string | undefined>(undefined);
   const [isWindowDragging, setIsWindowDragging] = useState(false);
@@ -30,6 +30,7 @@ export default function App() {
   const [statsModalOpen, setStatsModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [membersModalOpen, setMembersModalOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState<TakeoutAttachment | null>(null);
   const [rawJsonData, setRawJsonData] = useState<any | null>(null);
   const [highlightMessageId, setHighlightMessageId] = useState<string | undefined>(undefined);
@@ -163,13 +164,6 @@ export default function App() {
     }
   };
 
-  const handleLoadSampleData = () => {
-    setConversations(SAMPLE_CONVERSATIONS);
-    setActiveConversationId(SAMPLE_CONVERSATIONS[0].id);
-    setUploadViewOpen(false);
-    setParseProgress(null);
-  };
-
   const activeConversation = conversations.find((c) => c.id === activeConversationId) || conversations[0];
 
   // If year is filtered, optionally filter the displayed messages or jump
@@ -206,7 +200,7 @@ export default function App() {
         onOpenUpload={() => setUploadViewOpen(true)}
         onOpenSearch={() => setSearchModalOpen(true)}
         onOpenStats={() => setStatsModalOpen(true)}
-        onLoadSampleData={handleLoadSampleData}
+        onOpenPrivacy={() => setPrivacyModalOpen(true)}
         darkMode={darkMode}
         onToggleDarkMode={() => setDarkMode(!darkMode)}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -247,7 +241,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 sm:p-8 flex items-center justify-center">
               <FileUploadZone
                 onFilesSelected={handleFilesSelected}
-                onLoadSampleData={handleLoadSampleData}
+                onOpenPrivacy={() => setPrivacyModalOpen(true)}
                 progress={parseProgress}
               />
             </div>
@@ -288,21 +282,42 @@ export default function App() {
       {/* High Density Status Footer */}
       <footer
         id="app-status-footer"
-        className="h-7 bg-[#f1f3f4] dark:bg-neutral-900 border-t border-[#dadce0] dark:border-neutral-800 px-4 flex items-center justify-between text-[10px] text-[#5f6368] dark:text-neutral-400 select-none shrink-0"
+        className="h-8 bg-[#f1f3f4] dark:bg-neutral-900 border-t border-[#dadce0] dark:border-neutral-800 px-3 sm:px-4 flex items-center justify-between text-[11px] text-[#5f6368] dark:text-neutral-400 select-none shrink-0"
       >
         <div className="flex items-center gap-2 truncate">
-          <span>Engine: Browser-side V8</span>
+          <span className="font-semibold text-[#202124] dark:text-neutral-200">ArchiveChat v0.0.1</span>
           <span>•</span>
-          <span>Local Sandbox (Zero Network Transmission)</span>
+          <span className="hidden md:inline">Browser-side V8 Sandbox</span>
+          <span className="hidden md:inline">•</span>
+          <a
+            href="https://itsupportbee.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[#1a73e8] dark:hover:text-[#8ab4f8] hover:underline transition-colors"
+          >
+            © {new Date().getFullYear()} itsupportbee.com
+          </a>
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="hidden sm:inline font-mono">Takeout Viewer v1.4.2</span>
+          <button
+            onClick={() => setPrivacyModalOpen(true)}
+            className="text-[11px] font-medium text-[#1a73e8] dark:text-[#8ab4f8] hover:underline inline-flex items-center gap-1"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Privacy Policy</span>
+          </button>
+          <span className="hidden sm:inline text-neutral-300 dark:text-neutral-700">|</span>
           <span className="flex items-center gap-1.5 font-medium text-[#137333] dark:text-[#81c995]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#34a853] inline-block animate-pulse"></span>
             Local Runtime Active
           </span>
         </div>
       </footer>
+
+      {/* Privacy Policy Modal */}
+      {privacyModalOpen && (
+        <PrivacyPolicyModal onClose={() => setPrivacyModalOpen(false)} />
+      )}
 
       {/* Global Search Modal */}
       {searchModalOpen && (

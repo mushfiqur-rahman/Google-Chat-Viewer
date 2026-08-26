@@ -1,29 +1,28 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   UploadCloud,
   FolderOpen,
   FileCode,
   ShieldCheck,
-  Sparkles,
   AlertCircle,
   HelpCircle,
   ChevronDown,
   ChevronUp,
   FileArchive,
-  CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { ParseProgress } from '../types';
 import { getFilesFromDataTransfer } from '../utils/fileDrop';
 
 interface FileUploadZoneProps {
   onFilesSelected: (files: File[]) => void;
-  onLoadSampleData: () => void;
+  onOpenPrivacy?: () => void;
   progress: ParseProgress | null;
 }
 
 export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
   onFilesSelected,
-  onLoadSampleData,
+  onOpenPrivacy,
   progress,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
@@ -228,17 +227,22 @@ export const FileUploadZone: React.FC<FileUploadZoneProps> = ({
               </button>
             </div>
 
-            {/* Or Sample Data */}
-            <div className="pt-3 border-t border-[#dadce0] dark:border-neutral-800" onClick={(e) => e.stopPropagation()}>
-              <p className="text-xs text-[#5f6368] mb-2">Want to try it without an export first?</p>
-              <button
-                id="btn-load-sample-takeout"
-                type="button"
-                onClick={onLoadSampleData}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[#1a73e8] dark:text-[#8ab4f8] hover:bg-[#e8f0fe] dark:hover:bg-[#1a73e8]/20 rounded transition-colors border border-[#d2e3fc] dark:border-neutral-700"
-              >
-                <Sparkles className="w-3.5 h-3.5" /> Explore with Sample Google Chat Backup
-              </button>
+            {/* Privacy & Zero-Server Notice */}
+            <div className="pt-3 border-t border-[#dadce0] dark:border-neutral-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-[#5f6368] dark:text-neutral-400" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1.5 text-[#137333] dark:text-[#81c995]">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>100% In-Browser Memory • Zero Cloud Storage</span>
+              </div>
+              {onOpenPrivacy && (
+                <button
+                  id="btn-open-privacy-from-zone"
+                  type="button"
+                  onClick={onOpenPrivacy}
+                  className="font-medium text-[#1a73e8] dark:text-[#8ab4f8] hover:underline"
+                >
+                  View Privacy Policy
+                </button>
+              )}
             </div>
           </div>
         )}

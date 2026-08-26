@@ -1,17 +1,27 @@
-# Google Chat Takeout Viewer (ArchiveChat)
+# Google Chat Takeout Viewer (ArchiveChat) v0.0.1
 
-A fast, private, and full-featured local viewer and search engine for your Google Chat (and classic Google Hangouts) Takeout data backups.
+A fast, privacy-first, 100% client-side viewer and search engine for your Google Chat (and classic Google Hangouts) Takeout data backups.
+
+**Version:** 0.0.1  
+**Copyright:** © 2026 [itsupportbee.com](https://itsupportbee.com). All rights reserved.
+
+---
+
+## Privacy Policy & Security Guarantee
+
+- **100% Private & Client-Side Local**: All parsing, unzipping, indexing, and rendering happens entirely inside your browser's local sandbox memory using Web APIs. **Zero messages, attachments, contact names, or metadata are ever uploaded to an external server or cloud database.**
+- **Zero Telemetry or Tracking**: No analytics cookies, tracking pixels, or telemetry beacons are present.
+- **Volatile In-Memory Processing**: Parsed conversations and extracted media exist solely in local RAM for the duration of the browser tab session. Closing or reloading the tab immediately clears all data.
 
 ---
 
 ## Key Features
 
-- **100% Private & Client-Side Local**: All parsing, unzipping, indexing, and rendering happens entirely inside your browser's local memory using Web APIs. **Zero messages, attachments, or metadata are ever uploaded to an external server.**
 - **Flexible Archive Ingestion & Drag-and-Drop**:
   - Direct native drag-and-drop support for `.zip` files, folders (with nested recursive directory traversal), or `messages.json`
   - Global window drag detection with full-screen drop feedback
   - In-memory archive extraction via `jszip` with real-time parsing progress
-  - Directory picker fallback and built-in interactive **Demo Archive** to preview all features immediately
+  - Directory picker fallback for folder upload
 - **High-Density Google Chat UI & Keyboard Navigation**:
   - **Keyboard Navigation**: Use <kbd>↑</kbd> and <kbd>↓</kbd> (or <kbd>k</kbd>/<kbd>j</kbd>) to traverse messages, <kbd>Home</kbd>/<kbd>End</kbd> to jump to top/bottom, <kbd>S</kbd> to star/bookmark, <kbd>C</kbd> to copy, and <kbd>↵ Enter</kbd> to inspect attachments/JSON
   - Direct Messages (1:1) and Spaces / Group Chats with custom avatars and status indicators
@@ -95,6 +105,7 @@ The application will be running at:
 
 ---
 
-## License
+## Copyright & License
 
-MIT License. Designed for offline data preservation and privacy.
+Copyright © 2026 [itsupportbee.com](https://itsupportbee.com). All rights reserved.  
+Google, Google Chat, and Google Takeout are trademarks of Google LLC. This tool is an independent viewer not affiliated with Google LLC.
