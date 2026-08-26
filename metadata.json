@@ -1,0 +1,6 @@
+{
+  "name": "Google Chat Takeout Viewer",
+  "description": "Client-side privacy-first viewer and search engine for Google Takeout Google Chat and Hangouts export archives.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
